@@ -24,6 +24,17 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/ip", async (_req, res) => {
+  try {
+    const r = await fetch("https://api.ipify.org?format=json");
+    const data = await r.json();
+    res.json({ outboundIp: (data as { ip: string }).ip });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.json({ error: msg });
+  }
+});
+
 /* ── Protected routes (require x-api-key) ────────────── */
 
 app.use(apiKeyAuth);
