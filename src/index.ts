@@ -136,7 +136,31 @@ app.get("/test-access", async (_req, res) => {
     diag.outboundIps = "failed to check";
   }
 
-  // Test Perigee access
+  // Test Perigee access — multiple URLs and header combos
+  const tests = [
+    { label: "login_page_browser_ua", url: "https://live.perigeeportal.co.za/user/login", headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    }},
+    { label: "root_no_headers", url: "https://live.perigeeportal.co.za/", headers: {} },
+    { label: "root_browser_ua", url: "https://live.perigeeportal.co.za/", headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    }},
+  ];
+
+  const results: Record<string, unknown> = {};
+  for (const t of tests) {
+    try {
+      const r = await fetch(t.url, { headers: t.headers, redirect: "manual" });
+      const body = await r.text();
+      results[t.label] = { status: r.status, bodySnippet: body.substring(0, 300) };
+    } catch (err) {
+      results[t.label] = { error: err instanceof Error ? err.message : String(err) };
+    }
+  }
+  diag.perigeeTests = results;
+
   try {
     const r = await fetch("https://live.perigeeportal.co.za/user/login", {
       headers: {
@@ -148,18 +172,6 @@ app.get("/test-access", async (_req, res) => {
       redirect: "manual",
     });
     const body = await r.text();
-    const headers: Record<string, string> = {};
-    r.headers.forEach((v, k) => {
-      headers[k] = v;
-    });
-
-    diag.perigee = {
-      status: r.status,
-      statusText: r.statusText,
-      responseHeaders: headers,
-      bodyLength: body.length,
-      bodySnippet: body.substring(0, 500),
-    };
 
     res.json({
       status: r.status,
