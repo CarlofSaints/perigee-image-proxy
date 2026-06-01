@@ -111,16 +111,56 @@ app.get("/image", async (req, res) => {
 /**
  * GET /test-access
  * Quick check: can this server reach Perigee's login page?
+ * Returns detailed diagnostics including outbound IP from multiple services.
  */
 app.get("/test-access", async (_req, res) => {
+  const diag: Record<string, unknown> = {};
+
+  // Check outbound IP via multiple services
+  try {
+    const [ipify, httpbin] = await Promise.allSettled([
+      fetch("https://api.ipify.org?format=json").then((r) => r.json()),
+      fetch("https://httpbin.org/ip").then((r) => r.json()),
+    ]);
+    diag.outboundIps = {
+      ipify:
+        ipify.status === "fulfilled"
+          ? (ipify.value as { ip: string }).ip
+          : ipify.reason?.message,
+      httpbin:
+        httpbin.status === "fulfilled"
+          ? (httpbin.value as { origin: string }).origin
+          : httpbin.reason?.message,
+    };
+  } catch {
+    diag.outboundIps = "failed to check";
+  }
+
+  // Test Perigee access
   try {
     const r = await fetch("https://live.perigeeportal.co.za/user/login", {
       headers: {
         "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
       },
       redirect: "manual",
     });
+    const body = await r.text();
+    const headers: Record<string, string> = {};
+    r.headers.forEach((v, k) => {
+      headers[k] = v;
+    });
+
+    diag.perigee = {
+      status: r.status,
+      statusText: r.statusText,
+      responseHeaders: headers,
+      bodyLength: body.length,
+      bodySnippet: body.substring(0, 500),
+    };
+
     res.json({
       status: r.status,
       ok: r.status === 200,
@@ -130,10 +170,11 @@ app.get("/test-access", async (_req, res) => {
           : r.status === 403
             ? "403 Forbidden — Perigee is blocking this server's IP"
             : `Unexpected status ${r.status}`,
+      diag,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.json({ status: 0, ok: false, error: msg });
+    res.json({ status: 0, ok: false, error: msg, diag });
   }
 });
 
