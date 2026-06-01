@@ -35,6 +35,27 @@ app.get("/ip", async (_req, res) => {
   }
 });
 
+/**
+ * GET /debug-key
+ * TEMPORARY — reveals API_KEY details for debugging auth mismatch.
+ * DELETE THIS once auth is working.
+ */
+app.get("/debug-key", (req, res) => {
+  const envKey = process.env.API_KEY ?? "";
+  const sentKey = (req.headers["x-api-key"] as string) ?? "";
+  res.json({
+    envKeyLength: envKey.length,
+    envKeyFirst5: envKey.substring(0, 5),
+    envKeyLast5: envKey.substring(envKey.length - 5),
+    envKeyCharCodes: [...envKey].map((c) => c.charCodeAt(0)),
+    sentKeyLength: sentKey.length,
+    sentKeyFirst5: sentKey.substring(0, 5),
+    sentKeyLast5: sentKey.substring(sentKey.length - 5),
+    sentKeyCharCodes: [...sentKey].map((c) => c.charCodeAt(0)),
+    match: envKey === sentKey,
+  });
+});
+
 /* ── Protected routes (require x-api-key) ────────────── */
 
 app.use(apiKeyAuth);
