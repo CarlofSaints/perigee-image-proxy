@@ -226,14 +226,14 @@ export async function fetchPerigeeImage(
   }
 
   try {
-    const res = await fetch(imageUrl, {
-      headers: {
-        "User-Agent": UA,
-        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-        Cookie: sessionCookie,
-      },
-    });
+    const headers: Record<string, string> = {
+      "User-Agent": UA,
+      Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    };
+    if (sessionCookie) headers["Cookie"] = sessionCookie;
+
+    const res = await fetch(imageUrl, { headers });
 
     if (!res.ok) {
       return {

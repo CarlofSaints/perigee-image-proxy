@@ -79,20 +79,15 @@ app.post("/login", async (req, res) => {
 
 /**
  * GET /image?url=<perigee-image-url>
- * Header: x-perigee-cookie: SSESS...=value
+ * Optional header: x-perigee-cookie: SSESS...=value
  * Returns: image binary
  */
 app.get("/image", async (req, res) => {
   const imageUrl = req.query.url as string;
-  const cookie = req.headers["x-perigee-cookie"] as string;
+  const cookie = (req.headers["x-perigee-cookie"] as string) || "";
 
   if (!imageUrl) {
     res.status(400).json({ error: "Missing url query parameter" });
-    return;
-  }
-
-  if (!cookie) {
-    res.status(400).json({ error: "Missing x-perigee-cookie header" });
     return;
   }
 
